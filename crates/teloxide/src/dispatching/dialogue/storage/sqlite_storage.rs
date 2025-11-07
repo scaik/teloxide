@@ -3,6 +3,7 @@ use futures::future::BoxFuture;
 use serde::{de::DeserializeOwned, Serialize};
 use sqlx::{sqlite::SqlitePool, Executor};
 use std::{
+    collections::HashSet,
     convert::Infallible,
     fmt::{Debug, Display},
     str,
@@ -119,6 +120,26 @@ where
                 .await?
                 .map(|d| self.serializer.deserialize(&d).map_err(SqliteStorageError::SerdeError))
                 .transpose()
+        })
+    }
+
+    fn keys(self: Arc<Self>) -> BoxFuture<'static, Result<HashSet<ChatId>, Self::Error>> {
+        Box::pin(async move {
+            #[derive(sqlx::FromRow)]
+            struct DialogueDbRow {
+                chat_id: i64,
+            }
+
+            let keys = sqlx::query_as::<_, DialogueDbRow>(
+                "SELECT dialogue FROM teloxide_dialogues WHERE chat_id = ?",
+            )
+            .fetch_all(&self.pool)
+            .await?
+            .iter()
+            .map(|r| ChatId(r.chat_id))
+            .collect();
+
+            Ok(keys)
         })
     }
 }
