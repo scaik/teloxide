@@ -130,14 +130,12 @@ where
                 chat_id: i64,
             }
 
-            let keys = sqlx::query_as::<_, DialogueDbRow>(
-                "SELECT dialogue FROM teloxide_dialogues WHERE chat_id = ?",
-            )
-            .fetch_all(&self.pool)
-            .await?
-            .iter()
-            .map(|r| ChatId(r.chat_id))
-            .collect();
+            let keys = sqlx::query_as::<_, DialogueDbRow>("SELECT chat_id FROM teloxide_dialogues")
+                .fetch_all(&self.pool)
+                .await?
+                .iter()
+                .map(|r| ChatId(r.chat_id))
+                .collect();
 
             Ok(keys)
         })
